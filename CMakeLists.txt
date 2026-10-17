@@ -42,6 +42,7 @@ option(LVK_WITH_ML_EMULATION_LAYER "Build the Arm ML Emulation Layer for Vulkan 
 option(LVK_WITH_C_BINDINGS         "Build the C API (LVKC) from lvk/c/lvk_c.h"                   OFF)
 option(LVK_C_BINDINGS_SHARED       "Build the C API as a shared library"                         OFF)
 option(LVK_GENERATE_C_BINDINGS     "Regenerate lvk/c/lvk_c.h and lvk_c.cpp with libclang"        OFF)
+option(LVK_OPTIMIZE_BINARY_SIZE    "Discard unused code and strip symbols in non-Debug builds"   OFF)
 
 set(LVK_ANDROID_ABI "arm64-v8a" CACHE STRING "Enabled ABI on Android")
 # cmake-format: on
@@ -144,6 +145,7 @@ message(STATUS "LVK_WITH_ML_EMULATION_LAYER = ${LVK_WITH_ML_EMULATION_LAYER}")
 message(STATUS "LVK_WITH_C_BINDINGS         = ${LVK_WITH_C_BINDINGS}")
 message(STATUS "LVK_C_BINDINGS_SHARED       = ${LVK_C_BINDINGS_SHARED}")
 message(STATUS "LVK_GENERATE_C_BINDINGS     = ${LVK_GENERATE_C_BINDINGS}")
+message(STATUS "LVK_OPTIMIZE_BINARY_SIZE    = ${LVK_OPTIMIZE_BINARY_SIZE}")
 # cmake-format: on
 
 # cmake-format: off
@@ -158,6 +160,23 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 add_compile_options("$<$<CONFIG:DEBUG>:-DDEBUG>")
+
+if(LVK_OPTIMIZE_BINARY_SIZE)
+  # must come before any target is created: it applies to LVK and to all third-party libraries
+  if(MSVC)
+    # COMDAT per function, then let the linker drop the unreferenced ones and fold identical ones
+    add_compile_options("$<$<NOT:$<CONFIG:Debug>>:/Gy>")
+    add_link_options("$<$<NOT:$<CONFIG:Debug>>:/OPT:REF>" "$<$<NOT:$<CONFIG:Debug>>:/OPT:ICF>")
+  elseif(APPLE)
+    add_compile_options("$<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>" "$<$<NOT:$<CONFIG:Debug>>:-fdata-sections>")
+    add_link_options("$<$<NOT:$<CONFIG:Debug>>:LINKER:-dead_strip>")
+  else()
+    # a section per function/variable, then let the linker drop the unreferenced ones and the symbol table
+    add_compile_options("$<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>" "$<$<NOT:$<CONFIG:Debug>>:-fdata-sections>")
+    add_link_options("$<$<NOT:$<CONFIG:Debug>>:LINKER:--gc-sections>")
+    add_link_options("$<$<CONFIG:Release>:LINKER:--strip-all>")
+  endif()
+endif()
 
 message(STATUS "Generator : " ${CMAKE_GENERATOR})
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
