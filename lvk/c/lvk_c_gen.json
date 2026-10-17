@@ -1,0 +1,28 @@
+{
+  "func_prefix": "lvk_",
+  "const_prefix": "LVK_",
+  "type_prefix": "lvk_",
+  "type_suffix": "_t",
+  "header_guard": "LVK_C_H",
+  "defines": ["LVK_WITH_GLFW=1"],
+  "interfaces": {
+    "IContext": { "type": "Context", "prefix": "context", "strip": "", "destroy_function": true },
+    "ICommandBuffer": { "type": "CmdBuffer", "prefix": "cmd", "strip": "cmd" }
+  },
+  "type_renames": {
+    "VertexInput::VertexAttribute": "VertexAttribute",
+    "VertexInput::VertexInputBinding": "VertexInputBinding"
+  },
+  "struct_overrides": {
+    "SubmitHandle": [["uint64_t", "handle"]]
+  },
+  "constructor_suffixes": {
+    "ShaderModuleDesc": ["from_source", "from_source_entry_point", "from_spirv"]
+  },
+  "skip_functions": ["Assert"],
+  "skip_free_functions": ["destroy"],
+  "guards": {
+    "createVulkanContextWithSwapchain": "LVK_WITH_GLFW || LVK_WITH_SDL3 || defined(ANDROID)",
+    "initWindow": "LVK_WITH_GLFW || LVK_WITH_SDL3"
+  }
+}

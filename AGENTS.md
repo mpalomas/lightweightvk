@@ -107,7 +107,24 @@ To check CI status: `gh run list` or `gh run view <run-id>`.
 - `LVK_SPIRV_REFLECT_EXTERNAL`: Use external SPIRV-Reflect library (default: OFF)
 - `LVK_ENABLE_LONG_PATHS_WIN32`: Enable long paths on Windows (default: ON)
 - `LVK_ANDROID_ABI`: Enabled ABI on Android (cache string, default: `arm64-v8a`)
+- `LVK_WITH_C_BINDINGS`: Build the C API library `LVKC` from the committed `lvk/c/lvk_c.h` and `lvk/c/lvk_c.cpp`, plus the `C_001_HelloTriangle` sample (default: OFF). See "C Bindings" below
+- `LVK_C_BINDINGS_SHARED`: Build `LVKC` as a shared library (exports `LVK_C_API` symbols only; implies `LVK_WITH_C_BINDINGS`; default: OFF)
+- `LVK_GENERATE_C_BINDINGS`: Regenerate `lvk/c/lvk_c.h` and `lvk/c/lvk_c.cpp` from `lvk/LVK.h` at build time; needs Python with `pip install libclang` (implies `LVK_WITH_C_BINDINGS`; default: OFF)
 - `LVK_WITH_ML_EMULATION_LAYER`: Download and build the Arm ML Emulation Layer for Vulkan (`VK_LAYER_ML_Graph_Emulation`, `VK_LAYER_ML_Tensor_Emulation`) as an ExternalProject to emulate `VK_ARM_tensors`/`VK_ARM_data_graph` on GPUs without native support (default: OFF). It shares glslang, SPIRV-Headers, SPIRV-Tools and Vulkan-Headers with LVK; the layer manifests are installed into `build/ml-emulation-layer/bin` (Windows) or `build/ml-emulation-layer/share/vulkan/explicit_layer.d`. With `LVK_WITH_SAMPLES_ANDROID` the layer is also cross-built for every `LVK_ANDROID_ABI` (needs `ninja` and the NDK's `llvm-strip`) into `build/ml-emulation-layer-android/jniLibs`, which the generated projects list in `jniLibs.srcDirs`
+
+## C Bindings
+
+A flat C99 API (sokol/bgfx style) is **generated** from `lvk/LVK.h` by `lvk/c/lvk_c_gen.py` (Python + libclang). **Never hand-edit `lvk/c/lvk_c.h` or `lvk/c/lvk_c.cpp`**; the generated files are committed so regular builds need neither Python nor libclang.
+```bash
+pip install libclang
+python3 lvk/c/lvk_c_gen.py            # regenerate lvk/c/lvk_c.h and lvk/c/lvk_c.cpp
+python3 lvk/c/lvk_c_gen.py --check    # fail if the committed files are stale (CI does this)
+```
+Regenerate and commit both files whenever `lvk/LVK.h` changes its public API. Naming (`lvk_` functions, `LVK_` constants, `lvk_..._t` types), renames, skipped functions, overload/constructor suffixes and `#if` guards live in `lvk/c/lvk_c_gen.json`.
+- Structs mirror the C++ layout field by field (bit-cast in the shim); `static_assert(sizeof/offsetof)` in `lvk_c.cpp` fails the build on any mismatch. Enums are `uintN_t` typedefs plus anonymous `enum` constants
+- C++ default member values are not zeros: start every descriptor from `lvk_<struct>_default()`. Structs without a default constructor get `lvk_<struct>_<suffix>()` constructor functions
+- `IContext` -> `lvk_context_t*` (`lvk_context_*()`), `ICommandBuffer` -> `lvk_cmd_buffer_t*` (`lvk_cmd_*()`); `Holder<T>` becomes a plain handle that must be destroyed with `lvk_context_destroy_*()`; `ldr::Span<T>` becomes `lvk_span_*_t {data, size}`
+- Default arguments are not available in C, the header lists them in a comment above each function
 
 ## Coding Style
 

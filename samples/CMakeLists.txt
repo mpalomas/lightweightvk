@@ -206,3 +206,11 @@ endif()
 ADD_DEMO("DEMO_001_SolarSystem" LVK_WITH_SLANG)
 ADD_DEMO("Tiny_MeshLarge" LVK_WITH_SLANG)
 ADD_DEMO_SOURCES("Tiny_MeshLarge" "${LVK_ROOT_DIR}/third-party/deps/src/imgui/imgui_demo.cpp")
+
+if(LVK_WITH_C_BINDINGS AND LVK_WITH_GLFW AND NOT ANDROID)
+  # the same triangle as 001_HelloTriangle, written in plain C against the generated C API
+  add_executable(C_001_HelloTriangle C_001_HelloTriangle.c)
+  set_property(TARGET C_001_HelloTriangle PROPERTY C_STANDARD 99)
+  lvk_set_folder(C_001_HelloTriangle ${PROJECT_NAME})
+  target_link_libraries(C_001_HelloTriangle PRIVATE LVKC glfw LVKstb)
+endif()

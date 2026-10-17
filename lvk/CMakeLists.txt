@@ -48,3 +48,7 @@ endif()
 if(APPLE)
   target_link_libraries(LVKLibrary PRIVATE "-framework Metal" "-framework AppKit" "-framework Foundation" "-framework QuartzCore")
 endif()
+
+if(LVK_WITH_C_BINDINGS)
+  add_subdirectory(c)
+endif()

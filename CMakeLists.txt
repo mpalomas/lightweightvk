@@ -39,9 +39,27 @@ option(LVK_GLSLANG_EXTERNAL        "Use external glslang and SPIRV-Tools"    OFF
 option(LVK_SPIRV_REFLECT_EXTERNAL  "Use external SPIRV-Reflect library"      OFF)
 option(LVK_ENABLE_LONG_PATHS_WIN32 "Enable long paths on Windows"            ON)
 option(LVK_WITH_ML_EMULATION_LAYER "Build the Arm ML Emulation Layer for Vulkan (VK_ARM_tensors/VK_ARM_data_graph)" OFF)
+option(LVK_WITH_C_BINDINGS         "Build the C API (LVKC) from lvk/c/lvk_c.h"                   OFF)
+option(LVK_C_BINDINGS_SHARED       "Build the C API as a shared library"                         OFF)
+option(LVK_GENERATE_C_BINDINGS     "Regenerate lvk/c/lvk_c.h and lvk_c.cpp with libclang"        OFF)
 
 set(LVK_ANDROID_ABI "arm64-v8a" CACHE STRING "Enabled ABI on Android")
 # cmake-format: on
+
+if(LVK_GENERATE_C_BINDINGS AND NOT LVK_WITH_C_BINDINGS)
+  message(STATUS "WARNING: Setting LVK_GENERATE_C_BINDINGS=ON forces LVK_WITH_C_BINDINGS=ON")
+  set(LVK_WITH_C_BINDINGS ON)
+endif()
+
+if(LVK_C_BINDINGS_SHARED AND NOT LVK_WITH_C_BINDINGS)
+  message(STATUS "WARNING: Setting LVK_C_BINDINGS_SHARED=ON forces LVK_WITH_C_BINDINGS=ON")
+  set(LVK_WITH_C_BINDINGS ON)
+endif()
+
+if(LVK_C_BINDINGS_SHARED)
+  # all static libraries linked into the shared C API need position independent code
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 if(LVK_WITH_GLFW AND LVK_WITH_SDL3)
   message(FATAL_ERROR "LVK_WITH_GLFW and LVK_WITH_SDL3 are mutually exclusive. Enable only one.")
@@ -123,6 +141,9 @@ message(STATUS "LVK_GLSLANG_EXTERNAL        = ${LVK_GLSLANG_EXTERNAL}")
 message(STATUS "LVK_SPIRV_REFLECT_EXTERNAL  = ${LVK_SPIRV_REFLECT_EXTERNAL}")
 message(STATUS "LVK_ENABLE_LONG_PATHS_WIN32 = ${LVK_ENABLE_LONG_PATHS_WIN32}")
 message(STATUS "LVK_WITH_ML_EMULATION_LAYER = ${LVK_WITH_ML_EMULATION_LAYER}")
+message(STATUS "LVK_WITH_C_BINDINGS         = ${LVK_WITH_C_BINDINGS}")
+message(STATUS "LVK_C_BINDINGS_SHARED       = ${LVK_C_BINDINGS_SHARED}")
+message(STATUS "LVK_GENERATE_C_BINDINGS     = ${LVK_GENERATE_C_BINDINGS}")
 # cmake-format: on
 
 # cmake-format: off

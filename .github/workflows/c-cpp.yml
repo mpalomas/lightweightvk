@@ -119,7 +119,7 @@ jobs:
               cc: "clang-21",
               cxx: "clang++-21",
               generators: "Unix Makefiles",
-              cmake_args: "-DLVK_WITH_GLFW=ON -DLVK_WITH_SDL3=OFF -DLVK_DEPLOY_SCREENSHOT_TESTS=OFF -DLVK_WITH_SPIRV_OPT=ON"
+              cmake_args: "-DLVK_WITH_GLFW=ON -DLVK_WITH_SDL3=OFF -DLVK_DEPLOY_SCREENSHOT_TESTS=OFF -DLVK_WITH_SPIRV_OPT=ON -DLVK_WITH_C_BINDINGS=ON"
             }
           - {
               name: "Ubuntu - Clang (SDL3)",
@@ -146,7 +146,7 @@ jobs:
               cc: "gcc-15",
               cxx: "g++-15",
               generators: "Unix Makefiles",
-              cmake_args: "-DLVK_WITH_TRACY=ON -DLVK_WITH_TRACY_GPU=OFF -DLVK_WITH_GLFW=OFF -DLVK_WITH_SDL3=ON -DLVK_DEPLOY_SCREENSHOT_TESTS=OFF"
+              cmake_args: "-DLVK_WITH_TRACY=ON -DLVK_WITH_TRACY_GPU=OFF -DLVK_WITH_GLFW=OFF -DLVK_WITH_SDL3=ON -DLVK_DEPLOY_SCREENSHOT_TESTS=OFF -DLVK_WITH_C_BINDINGS=ON"
             }
       runs-on: ${{ matrix.config.os }}
 
@@ -188,6 +188,33 @@ jobs:
             cmake ${{ env.CMAKE_GENERATOR }} -S "${{ github.workspace }}" -B build ${{ matrix.config.cmake_args }}
             cd build
             cmake --build . --parallel ${{ steps.cpu-cores.outputs.count }}
+
+  c-bindings-up-to-date:
+    name: "C bindings (generated files are up to date)"
+    runs-on: ubuntu-26.04
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Cache third-party deps
+        uses: actions/cache@v5
+        with:
+          path: third-party/deps
+          key: deps-${{ runner.os }}-${{ hashFiles('third-party/bootstrap-deps.json') }}
+
+      - name: Install Ubuntu packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-21 python3-venv
+
+      - name: Check lvk/c/lvk_c.h and lvk/c/lvk_c.cpp
+        run: |
+          python3 deploy_deps.py
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install libclang
+          "$RUNNER_TEMP/venv/bin/python" lvk/c/lvk_c_gen.py --clang clang-21 --check
 
   cmake-build-macos:
       strategy:
