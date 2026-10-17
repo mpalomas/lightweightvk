@@ -12,14 +12,7 @@
  * Supports: --headless, --screenshot-frame <N>, --screenshot-file <name>
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <GLFW/glfw3.h>
-#include <stb_image_write.h>
-
-#include <lvk_c.h>
+#include "C_Common.h"
 
 static const char* codeVS =
     "#version 460\n"
@@ -39,55 +32,15 @@ static const char* codeFS =
     "  out_FragColor = vec4(color, 1.0);\n"
     "}\n";
 
-static int saveScreenshot(lvk_context_t* ctx, lvk_texture_handle_t texture, const char* fileName) {
-  lvk_context_wait(ctx, (lvk_submit_handle_t){0});
-  const lvk_dimensions_t dim = lvk_context_get_dimensions(ctx, texture);
-  const lvk_format_t format = lvk_context_get_format(ctx, texture);
-  if (format != LVK_FORMAT_BGRA_UN8 && format != LVK_FORMAT_BGRA_SRGB8 && format != LVK_FORMAT_RGBA_UN8 && format != LVK_FORMAT_RGBA_SRGB8) {
-    fprintf(stderr, "Unsupported pixel format %u\n", (unsigned)format);
-    return 0;
-  }
-  const size_t numPixels = (size_t)dim.width * dim.height;
-  uint8_t* rgba = (uint8_t*)malloc(numPixels * 4);
-  uint8_t* rgb = (uint8_t*)malloc(numPixels * 3);
-
-  lvk_texture_range_desc_t range = lvk_texture_range_desc_default();
-  range.dimensions = dim;
-  lvk_context_download_texture(ctx, texture, &range, rgba);
-
-  const int isBGRA = format == LVK_FORMAT_BGRA_UN8 || format == LVK_FORMAT_BGRA_SRGB8;
-  for (size_t i = 0; i != numPixels; i++) {
-    rgb[3 * i + 0] = rgba[4 * i + (isBGRA ? 2 : 0)];
-    rgb[3 * i + 1] = rgba[4 * i + 1];
-    rgb[3 * i + 2] = rgba[4 * i + (isBGRA ? 0 : 2)];
-  }
-  printf("Saving screenshot...%ux%u\n", dim.width, dim.height);
-  stbi_write_png(fileName, (int)dim.width, (int)dim.height, 3, rgb, 0);
-  free(rgba);
-  free(rgb);
-  return 1;
-}
-
 int main(int argc, char* argv[]) {
-  int headless = 0;
-  unsigned long long screenshotFrame = 0;
-  const char* screenshotFile = "screenshot.png";
-  for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--headless")) {
-      headless = 1;
-    } else if (!strcmp(argv[i], "--screenshot-frame") && i + 1 < argc) {
-      screenshotFrame = strtoull(argv[++i], NULL, 10);
-    } else if (!strcmp(argv[i], "--screenshot-file") && i + 1 < argc) {
-      screenshotFile = argv[++i];
-    }
-  }
+  const SampleArgs args = parseSampleArgs(argc, argv);
 
   int width = 800;
   int height = 600;
-  GLFWwindow* window = (GLFWwindow*)lvk_init_window("LVK C API: Hello Triangle", &width, &height, true, headless);
+  GLFWwindow* window = (GLFWwindow*)lvk_init_window("LVK C API: Hello Triangle", &width, &height, true, args.headless);
 
   lvk_context_config_t config = lvk_context_config_default();
-  config.enableHeadlessSurface = headless;
+  config.enableHeadlessSurface = args.headless;
 
   lvk_context_t* ctx = lvk_create_vulkan_context_with_swapchain(window, (uint32_t)width, (uint32_t)height, &config, LVK_HW_DEVICE_TYPE_DISCRETE, -1);
   if (!ctx) {
@@ -107,7 +60,7 @@ int main(int argc, char* argv[]) {
   const lvk_render_pipeline_handle_t pipeline = lvk_context_create_render_pipeline(ctx, &pipelineDesc, NULL);
 
   unsigned long long frameCount = 0;
-  while (headless || !glfwWindowShouldClose(window)) {
+  while (args.headless || !glfwWindowShouldClose(window)) {
     if (window) {
       glfwPollEvents();
       int w = 0;
@@ -147,8 +100,8 @@ int main(int argc, char* argv[]) {
     lvk_cmd_end_rendering(buffer);
     lvk_context_submit(ctx, buffer, swapchainTexture, &noRelease);
 
-    if (screenshotFrame && ++frameCount == screenshotFrame) {
-      saveScreenshot(ctx, swapchainTexture, screenshotFile);
+    if (args.screenshotFrame && ++frameCount == args.screenshotFrame) {
+      saveScreenshot(ctx, swapchainTexture, args.screenshotFile);
       break;
     }
   }

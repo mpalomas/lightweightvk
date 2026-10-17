@@ -208,9 +208,16 @@ ADD_DEMO("Tiny_MeshLarge" LVK_WITH_SLANG)
 ADD_DEMO_SOURCES("Tiny_MeshLarge" "${LVK_ROOT_DIR}/third-party/deps/src/imgui/imgui_demo.cpp")
 
 if(LVK_WITH_C_BINDINGS AND LVK_WITH_GLFW AND NOT ANDROID)
-  # the same triangle as 001_HelloTriangle, written in plain C against the generated C API
-  add_executable(C_001_HelloTriangle C_001_HelloTriangle.c)
-  set_property(TARGET C_001_HelloTriangle PROPERTY C_STANDARD 99)
-  lvk_set_folder(C_001_HelloTriangle ${PROJECT_NAME})
-  target_link_libraries(C_001_HelloTriangle PRIVATE LVKC glfw LVKstb)
+  # samples written in plain C against the generated C API
+  macro(ADD_C_DEMO app)
+    add_executable(${app} ${app}.c C_Common.h)
+    set_property(TARGET ${app} PROPERTY C_STANDARD 99)
+    lvk_set_folder(${app} ${PROJECT_NAME})
+    target_link_libraries(${app} PRIVATE LVKC glfw LVKstb)
+  endmacro()
+
+  ADD_C_DEMO(C_001_HelloTriangle)
+  if(WIN32 OR UNIX AND NOT (APPLE))
+    ADD_C_DEMO(C_005_MeshShaders)
+  endif()
 endif()
